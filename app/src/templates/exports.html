@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Query Export - Illicit Services</title>
+
+    <meta name="description" content="Export from our database of leaked information.">
+    <meta name="robots" content="index, follow">
+
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Illict Services LTD" />
+    <meta property="og:description" content="Export from our database of leaked information." />
+    <meta property="og:url" content="https://search.illicit.services" />
+    <meta property="og:site_name" content="Database Search" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="Content-Language" content="en" />
+
+
+    <meta name="apple-mobile-web-app-status-bar" content="#000000" />
+    <meta name="theme-color" content="#000000" />
+
+    <style>
+        html,
+        body {
+            height: 100%;
+        }
+
+        #app {
+            height: 100%;
+        }
+
+        html,
+        body,
+        #app,
+        v-main__wrap {
+            background-color: black;
+        }
+
+        /* */
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-main>
+                <!-- Export Modal -->
+                <v-dialog v-model="showExport" max-width="500px">
+                    <v-card>
+                        <v-card-title>
+                            <span class="headline">New Export</span>
+                            <v-spacer></v-spacer>
+                            <!-- About tooltip -->
+                            <v-tooltip bottom>
+                                <template v-slot:activator="{ on }">
+                                    <v-btn icon v-on="on" @click="showAbout = !showAbout">
+                                        <v-icon>mdi-information</v-icon>
+                                    </v-btn>
+                                </template>
+                                <span>Exports are a way to download your data. You can export your data as a CSV
+                                    file, or as a JSON file. The JSON file will be in a relational format, so you
+                                    can easily import it into a database. <br /><br />You can also export your data
+                                    from the visualization tool as CSV or Relational JSON.</span>
+                            </v-tooltip>
+                        </v-card-title>
+                        <v-card-text>
+                            <!-- Allow user to paste in search url as input -->
+                            <v-text-field id="exportUrl" v-model="exportUrl" label="Search URL" append
+                                append-icon="mdi-content-paste"></v-text-field>
+
+                            <!-- Input how many records to export -->
+                            <v-text-field id="exportCount" v-model="exportCount" label="Record Count" append
+                                append-icon="mdi-numeric"></v-text-field>
+
+                        </v-card-text>
+                        <v-card-actions>
+                            <v-btn color="red darken-1" text @click="showExport = false">
+                                Close
+                            </v-btn>
+                            <v-spacer></v-spacer>
+                            <v-btn color="blue darken-1" text @click="doExport">
+                                Export
+                            </v-btn>
+
+
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+                <v-container flex pa-0>
+                    <h1 style="margin-top: 5%">Database Exports</h1>
+                    <!-- Lists exports for wallet -->
+                    <v-card style="margin-top: 5%">
+                        <v-card-title>
+                            <span class="headline">Exports List</span>
+                            <v-spacer></v-spacer>
+                            <!-- New export button (plus icon) -->
+                            <v-tooltip bottom>
+                                <template v-slot:activator="{ on }">
+                                    <v-btn icon v-on="on" @click="showExport = !showExport">
+                                        <v-icon>mdi-plus</v-icon>
+                                    </v-btn>
+                                </template>
+                                <span>Create a new export</span>
+                            </v-tooltip>
+                        </v-card-title>
+                        <v-card-text>
+                            <v-data-table :items="exports" :headers="exportsTableHeaders">
+                                <!-- Download button slot -->
+                                <template v-slot:item.download="{ item }">
+                                    <v-btn :disabled="item.status != 'complete'" color="blue darken-1" text
+                                        @click="downloadExport(item)">
+                                        Download
+                                    </v-btn>
+                                </template>
+
+                            </v-data-table>
+                        </v-card-text>
+
+                    </v-card>
+
+
+                    <small>Copyright <a href="https://illicit.services">Illicit Services LTD</a>. Email: <a
+                            href="mailto:miyakoyakota@riseup.com">miyakoyakota@riseup.com</a>. By using this service you agree with the <a
+                            href="/terms">terms of use</a>. Also, treat these downloads as "hot" storage, don't expect
+                        your download to stay up forever should MEGA delete it.</small>
+                </v-container>
+            </v-main>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify({
+                theme: { dark: true },
+                // Mdi icons
+                icons: {
+                    iconfont: 'mdi',
+                },
+            }),
+            data: () => ({
+                showExport: false,
+                showAbout: false,
+                exportUrl: '',
+                exportCount: 200,
+                exports: [],
+                exportsTableHeaders: [
+                    { text: 'Export ID', value: 'jobid' },
+                    { text: 'Status', value: 'status' },
+                    { text: 'Query', value: 'query' },
+                    { text: 'Record Count', value: 'exportCount' },
+                    { text: 'Download', value: 'download' }
+                ],
+                hashTypes: ['BCrypt', 'MD5', 'SHA1', 'SHA256', 'SHA512', 'RIPEMD160', 'SHA3', 'SHA224', 'SHA384'],
+                queryOptions: [
+                    'First Name',
+                    'Last Name',
+                    'Email',
+                    'Username',
+                    'Password',
+                    'Domain',
+                    'IP Address',
+                    'ASN Number',
+                    'ASN Name',
+                    'Continent',
+                    'Country',
+                    'Phone',
+                    'Address',
+                    'License Plate Number',
+                    'Birth Year',
+                    'VIN',
+                    'City',
+                    'State',
+                    'Zip',
+                    'Source'
+                ],
+                queryFieldMap: {
+                    'First Name': 'firstName',
+                    'Last Name': 'lastName',
+                    'Email': 'emails',
+                    'Username': 'usernames',
+                    'Password': 'passwords',
+                    'Domain': 'domain',
+                    'IP Address': 'ips',
+                    'ASN Number': 'asn',
+                    'ASN Name': 'asnOrg',
+                    'Continent': 'continent',
+                    'Country': 'country',
+                    'Phone': 'phoneNumbers',
+                    'Address': 'address',
+                    'License Plate Number': 'VRN',
+                    'Birth Year': 'birthYear',
+                    'VIN': 'vin',
+                    'City': 'city',
+                    'State': 'state',
+                    'Zip': 'zipCode',
+                    'Source': 'source'
+                }
+            }),
+            mounted() {
+                // Check if ?url= is in the URL
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('url')) {
+                    this.exportUrl = decodeURIComponent(urlParams.get('url'));
+                    this.showExport = true;
+                }
+
+                // Fetch existing exports if needed
+                this.fetchExports();
+            },
+            methods: {
+                fetchExports() {
+                    // Assuming an API endpoint to fetch exports without wallet
+                    fetch(`/exports`)
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log(`exports: ${data}`)
+                            this.exports = data
+                        })
+                        .catch(error => {
+                            console.error('Error fetching exports:', error)
+                        })
+                },
+                downloadExport(item) {
+                    // Open item.link in new tab
+                    window.open(item.link, '_blank')
+                },
+                doExport() {
+                    // Validate export URL
+                    if (!this.exportUrl) {
+                        alert('Please enter a valid Search URL')
+                        return
+                    }
+
+                    // Check if export count is valid
+                    if (this.exportCount > 100000) {
+                        alert('Max 100,000 records per export')
+                        return
+                    }
+
+                    const exportUrlParams = new URL(this.exportUrl).searchParams;
+
+                    // Construct the /export URL with the same query parameters
+                    const exportEndpoint = new URL('/export', window.location.origin);
+                    exportEndpoint.search = exportUrlParams.toString();
+
+                    this.actuallyDoExport(exportEndpoint)
+                },
+                actuallyDoExport(exportUrl) {
+                    fetch(exportUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            exportCount: this.exportCount
+                        })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                alert('Export started... check back soon')
+                                this.exports.push({
+                                    query: new URL(exportUrl).searchParams.toString(),
+                                    exportCount: this.exportCount,
+                                    status: 'pending',
+                                    ...data
+                                })
+                                console.log(this.exports)
+                            } else {
+                                alert('Error exporting.')
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error during export:', error)
+                            alert('Error exporting.')
+                        })
+                },
+                buildQuery() {
+                    let query = ''
+                    this.queries.forEach((q, idx) => {
+                        const field = this.queryFieldMap[q.field];
+                        const value = q.value;
+
+                        if (q.not) {
+                            if (idx === 0) {
+                                query += `not${field}=${q.value}`;
+                            } else {
+                                query += `&not${field}=${q.value}`;
+                            }
+                        } else {
+                            if (idx === 0) {
+                                query += `${field}=${q.value}`;
+                            } else {
+                                query += `&${field}=${q.value}`;
+                            }
+                        }
+
+                        if (this.exact) {
+                            query += `&exact=true`;
+                        }
+                    });
+
+                    return query
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>

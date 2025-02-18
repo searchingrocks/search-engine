@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search</title>
+
+    <!-- Correct Vuetify CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.9.96/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.7.2/dist/vuetify.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+
+    <meta name="description" content="Search our database of publicly acquired information. All information is in the public domain and has been compiled into one search engine.">
+    <meta name="robots" content="index, follow">
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Search Engine LTD" />
+    <meta property="og:description" content="Search our database of publicly acquired information. All information is in the public domain and has been compiled into one search engine." />
+    <meta property="og:url" content="https://search.example.com" />
+    <meta property="og:site_name" content="Database Search" />
+
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="app">
+        <v-app>
+            <v-main>
+                <v-container class="py-5">
+                    <v-row>
+                        <v-col cols="12">
+                            <h1 class="text-center">Records Search</h1>
+                            <h2 class="text-center">{{ count }} Records in DB</h2>
+                            <h3 class="text-center">
+                                <a href="/map" target="_blank">Try the Map</a> |
+                                <a href="/faq">FAQ</a> |
+                                <a href="/exports">Exports</a>
+                            </h3>
+                            <h3 class="text-center">
+                                {{#isLoggedIn}}
+                                    <form action="/logout" method="get" style="display: inline;">
+                                        <button type="submit" class="v-btn v-btn--contained theme--light v-size--default red">
+                                            Logout
+                                        </button>
+                                    </form>
+                                {{/isLoggedIn}}
+                                {{^isLoggedIn}}
+                                    <a href="/login" class="v-btn v-btn--contained theme--light v-size--default blue">
+                                        Login
+                                    </a>
+                                {{/isLoggedIn}}
+                            </h3>
+                        </v-col>
+                    </v-row>
+
+                    <v-card elevation="2" class="pa-4" color="#1e1e1e">
+                        <v-row v-for="(query, idx) in queries" :key="idx" align="center" class="my-3">
+                            <v-col cols="1">
+                                <v-btn
+                                        icon
+                                        @click="idx === 0 ? addQuery() : queries.splice(idx, 1)"
+                                        color="red lighten-1"
+                                        class="white--text">
+                                    <v-icon>{{ idx === 0 ? 'mdi-plus' : 'mdi-minus' }}</v-icon>
+                                </v-btn>
+                            </v-col>
+                            <v-col cols="2">
+                                <v-select
+                                        v-model="query.field"
+                                        :items="queryOptions"
+                                        label="Field"
+                                        dense
+                                        solo
+                                        class="white--text"
+                                        hide-details
+                                ></v-select>
+                            </v-col>
+                            <v-col cols="1" v-if="!isMobile()">
+                                <v-checkbox
+                                        v-model="query.not"
+                                        label="Is Not"
+                                        color="red"
+                                ></v-checkbox>
+                            </v-col>
+                            <v-col cols="6" v-if="query.field !== 'Password'">
+                                <v-text-field
+                                        v-model="query.value"
+                                        label="Value"
+                                        solo-inverted
+                                        hide-details
+                                ></v-text-field>
+                            </v-col>
+                            <v-col cols="4" v-if="query.field === 'Password'">
+                                <v-text-field
+                                        v-model="query.value"
+                                        label="Password"
+                                        solo-inverted
+                                        hide-details
+                                ></v-text-field>
+                            </v-col>
+                            <v-col cols="2" v-if="query.field === 'Password'">
+                                <v-checkbox
+                                        v-model="query.extendedSearch"
+                                        label="Extended Search"
+                                        color="green"
+                                ></v-checkbox>
+                            </v-col>
+                            <v-col cols="2" v-if="idx === 0">
+                                <v-btn
+                                        @click="buildAndSendQuery"
+                                        color="blue darken-2"
+                                        block
+                                        class="white--text">
+                                    <v-icon left>mdi-magnify</v-icon>Search
+                                </v-btn>
+                            </v-col>
+                        </v-row>
+                    </v-card>
+                </v-container>
+            </v-main>
+        </v-app>
+    </div>
+
+    <!-- Load Vue.js and Vuetify.js correctly using <script> tags -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify({
+                theme: { dark: true },
+                icons: {
+                    iconfont: 'mdi',
+                },
+            }),
+            data: () => ({
+                queries: [
+                    { field: 'First Name', value: '' },
+                ],
+                exact: false,
+                queryOptions: [
+                    'First Name',
+                    'Last Name',
+                    'Email',
+                    'Username',
+                    'Password',
+                    'Domain',
+                    'IP Address',
+                    'ASN Number',
+                    'ASN Name',
+                    'Continent',
+                    'Country',
+                    'Phone',
+                    'Address',
+                    'License Plate Number',
+                    'Birth Year',
+                    'VIN',
+                    'City',
+                    'State',
+                    'Zip',
+                    'Source',
+                    'SSN',
+                    'License Number',
+                    'Debit',
+                    'Debit Expiration',
+                    'Debit Pin',
+                    'Credit',
+                    'Credit Expiration',
+                    'Credit Pin',
+                    'Passport Number',
+                    'Military ID',
+                    'Bank Account Numbers',
+                    'Schools Attended',
+                    'Certifications',
+                    'Political Affiliation'
+                ],
+                queryFieldMap: {
+                    'First Name': 'firstName',
+                    'Last Name': 'lastName',
+                    'Email': 'emails',
+                    'Username': 'usernames',
+                    'Password': 'passwords',
+                    'Domain': 'domain',
+                    'IP Address': 'ips',
+                    'ASN Number': 'asn',
+                    'ASN Name': 'asnOrg',
+                    'Continent': 'continent',
+                    'Country': 'country',
+                    'Phone': 'phoneNumbers',
+                    'Address': 'address',
+                    'License Plate Number': 'VRN',
+                    'Birth Year': 'birthYear',
+                    'VIN': 'vin',
+                    'City': 'city',
+                    'State': 'state',
+                    'Zip': 'zipCode',
+                    'Source': 'source',
+                    'SSN': 'ssn',
+                    'License Number': 'licenseNumber',
+                    'Debit': 'debitNumber',
+                    'Debit Expiration': 'debitExpiration',
+                    'Debit Pin': 'debitPin',
+                    'Credit': 'creditNumber',
+                    'Credit Expiration': 'creditExpiration',
+                    'Credit Pin': 'creditPin',
+                    'Passport Number': 'passportNumber',
+                    'Military ID': 'militaryID',
+                    'Bank Account Numbers': 'bankAccountNumbers',
+                    'Schools Attended': 'schoolsAttended',
+                    'Certifications': 'certifications',
+                    'Political Affiliation': 'politicalAffiliation'
+                }
+            }),
+            methods: {
+                addQuery() {
+                    if (this.queries.length >= 5) {
+                        alert('Max 5 fields per query');
+                    } else {
+                        this.queries.push({ field: 'First Name', value: '' });
+                    }
+                },
+                isMobile() {
+                    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+                },
+                buildAndSendQuery() {
+                    let query = '';
+                    this.queries.forEach((q, idx) => {
+                        const field = this.queryFieldMap[q.field];
+                        const value = q.value;
+
+                        if (q.not) {
+                            query += idx === 0 ? `not${field}=${q.value}` : `&not${field}=${q.value}`;
+                        } else {
+                            query += idx === 0 ? `${field}=${q.value}` : `&${field}=${q.value}`;
+                        }
+
+                        if (this.exact) {
+                            query += '&exact=true';
+                        }
+                    });
+                    window.location.href = `/records?${query}`;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

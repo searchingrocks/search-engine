@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register - Search Engine</title>
+
+  <!-- External Fonts and Icons -->
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <!-- Vuetify CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <!-- Custom Styles (optional) -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <v-app dark style="background-color: #121212; color: #f8f9fa;">
+      <v-main>
+        <v-container class="py-5" fluid fill-height>
+          <v-row justify="center">
+            <v-col cols="12" sm="8" md="6" lg="4">
+              <v-card class="pa-4" elevation="2" style="background-color: #1e1e1e;">
+                <v-form action="/register" method="POST">
+                  <v-row>
+                    <v-col cols="12">
+                      <h1 class="text-center" style="color: #f8f9fa;">Register</h1>
+                      {{#error}}
+                        <div class="red--text text-center">{{error}}</div>
+                      {{/error}}
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-text-field
+                        label="Username"
+                        name="username"
+                        id="username"
+                        required
+                        solo-inverted
+                        hide-details
+                        dark
+                        style="color: #f8f9fa;"
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-text-field
+                        label="Password"
+                        type="password"
+                        name="password"
+                        id="password"
+                        required
+                        solo-inverted
+                        hide-details
+                        dark
+                        style="color: #f8f9fa;"
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-btn type="submit" color="blue darken-2" block class="white--text">
+                        <v-icon left>mdi-account-plus</v-icon>Register
+                      </v-btn>
+                    </v-col>
+                  </v-row>
+                </v-form>
+                <!-- Link to Sign In Page -->
+                <v-row class="mt-4">
+                  <v-col cols="12" class="text-center">
+                    <span>Already have an account?</span>
+                    <v-btn text color="blue darken-2" href="/login">
+                      Sign In
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-main>
+    </v-app>
+  </div>
+
+  <!-- Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <!-- Vuetify JS -->
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.0/dist/vuetify.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      vuetify: new Vuetify({
+        theme: { dark: true },
+        icons: {
+          iconfont: 'mdi',
+        },
+      }),
+      data: {
+        error: '{{error}}'
+      }
+    });
+  </script>
+</body>
+</html>
