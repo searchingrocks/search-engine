@@ -37,3 +37,26 @@ export async function createUser(username: string, hashedPassword: string, role:
   );
   return result.rows[0];
 }
+
+// Update a user’s password by ID
+export async function updateUserPasswordById(userId: number, hashedPassword: string): Promise<void> {
+  await pool.query(
+    'UPDATE users SET password = $1 WHERE id = $2',
+    [hashedPassword, userId]
+  );
+}
+
+// Delete a user by ID
+export async function deleteUserById(userId: number): Promise<void> {
+  await pool.query(
+    'DELETE FROM users WHERE id = $1',
+    [userId]
+  );
+}
+
+export async function getAllUsers(): Promise<User[]> {
+  const result = await pool.query(
+    'SELECT id, username, role FROM users'
+  );
+  return result.rows;
+}

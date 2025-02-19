@@ -4,6 +4,7 @@ import mustache from 'mustache';
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { getAllUsers } from '../models/usersDB';
 import { getUserByUsername, updateUserPassword, createUser } from '../models/usersDB';
 
 const loginTemplate = fs.readFileSync(path.join(__dirname, '..', 'templates', 'login.mustache'), 'utf-8');
@@ -55,35 +56,39 @@ authRouter.get('/register', async (req, res) => {
     return res.send(rendered);
 });
 
-// Register Page POST
 authRouter.post('/register', async (req, res) => {
     if (!allowRegistrations) {
-        return res.status(403).send('Registrations are currently disabled.');
+      return res.status(403).send('Registrations are currently disabled.');
     }
-
+  
     const { username, password } = req.body;
-
+  
     // Check if username already exists
     const existingUser = await getUserByUsername(username);
     if (existingUser) {
-        const rendered = mustache.render(registerTemplate, { error: "Username already taken." });
-        return res.send(rendered);
+      const rendered = mustache.render(registerTemplate, { error: "Username already taken." });
+      return res.send(rendered);
     }
-
-    // Hash password
+  
+    // Check if there are any users in the database
+    const allUsers = await getAllUsers();
+    // If no users exist, this is the first user. Make them admin.
+    const role = allUsers.length === 0 ? 'admin' : 'user';
+  
+    // Hash the password
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-
+  
     try {
-        const newUser = await createUser(username, hashedPassword, 'user');
-        req.session!.user = { id: newUser.id, username: newUser.username, role: newUser.role };
-        return res.redirect('/');
+      const newUser = await createUser(username, hashedPassword, role);
+      req.session!.user = { id: newUser.id, username: newUser.username, role: newUser.role };
+      return res.redirect('/');
     } catch (err) {
-        console.error('Error creating user:', err);
-        const rendered = mustache.render(registerTemplate, { error: "Error creating user. Please try again." });
-        return res.send(rendered);
+      console.error('Error creating user:', err);
+      const rendered = mustache.render(registerTemplate, { error: "Error creating user. Please try again." });
+      return res.send(rendered);
     }
-});
+  });
 
 authRouter.get('/changepassword', async (req, res) => {
     const rendered = mustache.render(changePasswordTemplate, { error: null });
