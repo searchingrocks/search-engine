@@ -1,6 +1,6 @@
 services:
   web:
-    image: ghcr.io/privlol/search:main
+    image: ghcr.io/searchingrocks/search-engine:main
     ports:
       - "3000:3000"
     environment:
