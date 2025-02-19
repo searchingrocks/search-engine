@@ -27,11 +27,6 @@ declare module 'express-session' {
 const indexTemplate = fs.readFileSync(path.join(__dirname, '/templates/home.mustache'), 'utf-8');
 const metaPartial = fs.readFileSync(path.join(__dirname, '/templates/meta.mustache'), 'utf-8');
 
-const ogTitle = process.env.OG_TITLE || 'Default Site Title';
-const ogDescription = process.env.OG_DESCRIPTION || 'Default Description';
-const siteUrl = process.env.SITE_URL || 'https://default-url.com';
-const ogSiteName = process.env.OG_SITE_NAME || 'Default Site Name';
-
 const app = express();
 const port = process.env.PORT || 3000;
 
