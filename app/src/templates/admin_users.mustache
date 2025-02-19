@@ -2,44 +2,161 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>User Management</title>
-  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Vuetify CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.6.0/dist/vuetify.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #121212;
+      color: #f8f9fa;
+    }
+  </style>
 </head>
-<body style="background-color: #121212; color: #f8f9fa;">
+<body>
   <div id="app">
-    <h1>User Management</h1>
-    <table border="1" style="width:100%; background-color:#1e1e1e; color:#f8f9fa;">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Username</th>
-          <th>Role</th>
-          <th>Change Password</th>
-          <th>Delete</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{#users}}
-        <tr>
-          <td>{{id}}</td>
-          <td>{{username}}</td>
-          <td>{{role}}</td>
-          <td>
-            <form action="/admin/users/{{id}}/changePassword" method="POST">
-              <input type="password" name="newPassword" placeholder="New Password" required>
-              <button type="submit">Change</button>
-            </form>
-          </td>
-          <td>
-            <form action="/admin/users/{{id}}/delete" method="POST" onsubmit="return confirm('Are you sure you want to delete this user?');">
-              <button type="submit">Delete</button>
-            </form>
-          </td>
-        </tr>
-        {{/users}}
-      </tbody>
-    </table>
+    <v-app dark>
+      <v-main>
+        <v-container>
+
+          <!-- Change Password Form -->
+          <v-card outlined class="pa-4 mb-4">
+            <v-card-title class="headline">Change User Password</v-card-title>
+            <v-card-text>
+              <v-form @submit.prevent="changePassword">
+                <v-text-field
+                  v-model="changePasswordForm.userid"
+                  label="User ID"
+                  required
+                ></v-text-field>
+                <v-text-field
+                  v-model="changePasswordForm.newPassword"
+                  label="New Password"
+                  type="password"
+                  required
+                ></v-text-field>
+                <v-btn type="submit" color="primary">Change Password</v-btn>
+              </v-form>
+            </v-card-text>
+          </v-card>
+
+          <!-- Delete User Form -->
+          <v-card outlined class="pa-4 mb-4">
+            <v-card-title class="headline">Delete User Account</v-card-title>
+            <v-card-text>
+              <v-form @submit.prevent="deleteUser">
+                <v-text-field
+                  v-model="deleteUserForm.userid"
+                  label="User ID"
+                  required
+                ></v-text-field>
+                <v-btn type="submit" color="error">Delete User</v-btn>
+              </v-form>
+            </v-card-text>
+          </v-card>
+
+          <!-- List of User Accounts -->
+          <v-card outlined class="pa-4">
+            <v-card-title class="headline">User Accounts</v-card-title>
+            <v-card-text>
+              <v-data-table
+                :headers="headers"
+                :items="users"
+                item-key="id"
+                class="elevation-1"
+                hide-default-footer
+              >
+              </v-data-table>
+            </v-card-text>
+          </v-card>
+
+        </v-container>
+      </v-main>
+    </v-app>
   </div>
+
+  <!-- Inject users data as JSON (your server should output a JSON string of users in usersJSON) -->
+  <script>
+    // Example: your server must render usersJSON as a JSON string.
+    window.users = {{{usersJSON}}} || [];
+  </script>
+
+  <!-- Vue and Vuetify JS -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.0/dist/vuetify.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      vuetify: new Vuetify({ theme: { dark: true } }),
+      data: () => ({
+        changePasswordForm: {
+          userid: '',
+          newPassword: ''
+        },
+        deleteUserForm: {
+          userid: ''
+        },
+        headers: [
+          { text: 'ID', value: 'id' },
+          { text: 'Username', value: 'username' },
+          { text: 'Role', value: 'role' }
+        ],
+        users: window.users
+      }),
+      methods: {
+        changePassword() {
+          if (!this.changePasswordForm.userid || !this.changePasswordForm.newPassword) {
+            alert("Please fill out both fields.");
+            return;
+          }
+          const url = `/admin/users/${this.changePasswordForm.userid}/changePassword`;
+          fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ newPassword: this.changePasswordForm.newPassword })
+          })
+          .then(response => {
+            if (response.ok) {
+              alert("Password changed successfully.");
+              // Optionally clear the form or reload the page.
+              this.changePasswordForm.userid = '';
+              this.changePasswordForm.newPassword = '';
+            } else {
+              response.text().then(text => alert("Error: " + text));
+            }
+          })
+          .catch(error => {
+            console.error("Error:", error);
+            alert("Error changing password.");
+          });
+        },
+        deleteUser() {
+          if (!this.deleteUserForm.userid) {
+            alert("Please enter a user ID.");
+            return;
+          }
+          if (!confirm("Are you sure you want to delete this user?")) {
+            return;
+          }
+          const url = `/admin/users/${this.deleteUserForm.userid}/delete`;
+          fetch(url, { method: 'POST' })
+            .then(response => {
+              if (response.ok) {
+                alert("User deleted successfully.");
+                this.deleteUserForm.userid = '';
+                // Optionally refresh the page.
+                window.location.reload();
+              } else {
+                alert("Error deleting user.");
+              }
+            })
+            .catch(error => {
+              console.error("Error:", error);
+              alert("Error deleting user.");
+            });
+        }
+      }
+    });
+  </script>
 </body>
 </html>

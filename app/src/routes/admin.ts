@@ -17,7 +17,10 @@ adminRouter.get('/users', requireLogin, async (req, res) => {
     return res.status(403).send('Access denied: You do not have admin privileges.');
   }
   const users = await getAllUsers();
-  const rendered = mustache.render(adminUsersTemplate, { users });
+  const rendered = mustache.render(adminUsersTemplate, { 
+    users, 
+    usersJSON: JSON.stringify(users)
+  });
   res.send(rendered);
 });
 

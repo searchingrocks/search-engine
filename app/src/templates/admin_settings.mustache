@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Vuetify CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+</head>
+<body>
+  <div id="app">
+    <v-app dark>
+      <v-main>
+        <v-container>
+          <v-card outlined class="pa-4">
+            <v-card-title>
+              <span class="headline">Admin Settings</span>
+            </v-card-title>
+            <v-card-text>
+              <v-form action="/admin/settings" method="POST">
+                <v-select
+                  name="allowRegistrations"
+                  label="Allow Registrations"
+                  :items="items"
+                  v-model="selectedValue"
+                  required
+                ></v-select>
+                <v-btn type="submit" color="primary" class="mt-4">
+                  Save
+                </v-btn>
+              </v-form>
+            </v-card-text>
+          </v-card>
+        </v-container>
+      </v-main>
+    </v-app>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.0/dist/vuetify.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      vuetify: new Vuetify({ theme: { dark: true } }),
+      data: () => ({
+        selectedValue: '{{#isAllowed}}true{{/isAllowed}}{{^isAllowed}}false{{/isAllowed}}',
+        items: [
+          { text: 'Enabled', value: 'true' },
+          { text: 'Disabled', value: 'false' }
+        ]
+      })
+    });
+  </script>
+</body>
+</html>
