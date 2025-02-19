@@ -1,12 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin Dashboard</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard</title>
+
+  <!-- External Fonts and Icons -->
+  <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+  <!-- Vuetify CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
 </head>
 <body>
-<h1>Admin Dashboard</h1>
-<p>{{message}}</p>
-<p>Sorry this feature currently isn't fully implemented yet</p>
+  <div id="app">
+    <v-app dark style="background-color: #121212; color: #f8f9fa;">
+      <v-main>
+        <v-container class="py-5" fluid>
+          <v-row justify="center">
+            <v-col cols="12" md="8">
+              <v-card elevation="2" class="pa-4" style="background-color: #1e1e1e;">
+                <v-card-title class="headline text-center">
+                  Admin Dashboard
+                </v-card-title>
+                <v-card-text>
+                  <p class="text-center">{{message}}</p>
+                  <p class="text-center">Sorry, this feature currently isn't fully implemented yet.</p>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-main>
+    </v-app>
+  </div>
+
+  <!-- Vue.js -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <!-- Vuetify JS -->
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.0/dist/vuetify.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      vuetify: new Vuetify({
+        theme: { dark: true },
+        icons: { iconfont: 'mdi' }
+      }),
+      data: {
+        message: '{{message}}'
+      }
+    });
+  </script>
 </body>
 </html>
