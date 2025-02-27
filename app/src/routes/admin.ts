@@ -86,6 +86,38 @@ adminRouter.post('/settings', requireLogin, checkAdmin, async (req: Request, res
   res.redirect('/admin/settings');
 });
 
+// Route to upload a JSONL file and validate its contents
+adminRouter.post(
+  '/upload-data',
+  requireLogin,
+  checkAdmin,
+  upload.single('datafile'),
+  async (req: Request, res: Response) => {
+    // Multer adds the file as a property on req; we extend its type here.
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+    if (!file) {
+      return res.status(400).json({ message: 'No file uploaded.' });
+    }
+    try {
+      const data = fs.readFileSync(file.path, 'utf8');
+      // Validate that every non-empty line is valid JSON (JSONL format)
+      const lines = data.split(/\r?\n/).filter((line) => line.trim() !== '');
+      for (const line of lines) {
+        JSON.parse(line);
+      }
+      res.json({ message: 'File uploaded and validated successfully.' });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      res.status(400).json({ message: `Invalid JSONL file: ${errorMessage}` });
+    } finally {
+      // Remove the file after processing
+      fs.unlink(file.path, (err) => {
+        if (err) console.error('Failed to remove uploaded file:', err);
+      });
+    }
+  }
+);
+
 // Route to initialize the Solr database
 adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, res: Response) => {
   try {
@@ -172,7 +204,6 @@ adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, re
 
     res.json({ message: 'Solr database initiated successfully.' });
   } catch (err) {
-    // Cast error to Error to access the message property
     const errorMessage = err instanceof Error ? err.message : String(err);
     res.status(500).json({ message: `Error initiating Solr: ${errorMessage}` });
   }
