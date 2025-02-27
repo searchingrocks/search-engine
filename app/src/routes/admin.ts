@@ -29,9 +29,10 @@ const adminSettingsTemplate = fs.readFileSync(
 const adminRouter = Router();
 
 // Helper middleware to ensure the user is an admin.
-const checkAdmin = (req: Request, res: Response, next: NextFunction) => {
+const checkAdmin = (req: Request, res: Response, next: NextFunction): void => {
   if (!checkUserRole(req, 'admin')) {
-    return res.status(403).send('Access denied: You do not have admin privileges.');
+    res.status(403).send('Access denied: You do not have admin privileges.');
+    return;
   }
   next();
 };
@@ -86,39 +87,72 @@ adminRouter.post('/settings', requireLogin, checkAdmin, async (req: Request, res
   res.redirect('/admin/settings');
 });
 
-// Route to upload a JSONL file and validate its contents
+// ***** Upload Routes *****
+
+// GET route to display the data upload form
+adminRouter.get('/upload-data', requireLogin, checkAdmin, (req: Request, res: Response) => {
+  // Ensure you have created a template named "admin_upload.mustache"
+  const uploadTemplate = fs.readFileSync(
+    path.join(__dirname, '..', 'templates', 'admin_upload.mustache'),
+    'utf-8'
+  );
+  const rendered = mustache.render(uploadTemplate, {});
+  res.send(rendered);
+});
+
+// POST route to handle file upload and send data to Solr.
+// We extend the Request type so that req.file is recognized.
+interface MulterRequest extends Request {
+  file?: Express.Multer.File;
+}
+
 adminRouter.post(
   '/upload-data',
   requireLogin,
   checkAdmin,
   upload.single('datafile'),
-  async (req: Request, res: Response) => {
-    // Multer adds the file as a property on req; we extend its type here.
-    const file = (req as Request & { file?: Express.Multer.File }).file;
-    if (!file) {
-      return res.status(400).json({ message: 'No file uploaded.' });
-    }
+  async (req: MulterRequest, res: Response, next: NextFunction) => {
     try {
-      const data = fs.readFileSync(file.path, 'utf8');
-      // Validate that every non-empty line is valid JSON (JSONL format)
-      const lines = data.split(/\r?\n/).filter((line) => line.trim() !== '');
-      for (const line of lines) {
-        JSON.parse(line);
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded.' });
       }
-      res.json({ message: 'File uploaded and validated successfully.' });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      res.status(400).json({ message: `Invalid JSONL file: ${errorMessage}` });
-    } finally {
-      // Remove the file after processing
-      fs.unlink(file.path, (err) => {
-        if (err) console.error('Failed to remove uploaded file:', err);
+      // Read the uploaded file
+      const filePath = req.file.path;
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+
+      // Validate that the file is in JSONL format: every nonempty line must be valid JSON.
+      const lines = fileContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+      for (const line of lines) {
+        try {
+          JSON.parse(line);
+        } catch (err) {
+          throw new Error(`Invalid JSON on line: ${line}`);
+        }
+      }
+      // Optionally, convert JSONL into an array of JSON objects
+      const docs = lines.map(line => JSON.parse(line));
+
+      // POST the array of documents to Solr's update endpoint.
+      const solrUrl = 'http://127.0.0.1:8983/solr/BigData/update?commit=true';
+      const solrResponse = await axios.post(solrUrl, docs, {
+        headers: { 'Content-Type': 'application/json' }
       });
+
+      // Remove the temporary uploaded file
+      fs.unlinkSync(filePath);
+
+      res.json({ message: 'Data uploaded successfully', solrResponse: solrResponse.data });
+    } catch (err) {
+      console.error(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      res.status(500).json({ message: `Data upload failed: ${errorMessage}` });
     }
   }
 );
 
-// Route to initialize the Solr database
+// ***** Solr Initialization Route *****
+
+// POST route to initiate the Solr database. (A button on the upload page may trigger this route.)
 adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, res: Response) => {
   try {
     const solrCollectionUrl = 'http://127.0.0.1:8983/solr/admin/collections';
@@ -203,7 +237,7 @@ adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, re
     }
 
     res.json({ message: 'Solr database initiated successfully.' });
-  } catch (err) {
+  } catch (err: any) {
     const errorMessage = err instanceof Error ? err.message : String(err);
     res.status(500).json({ message: `Error initiating Solr: ${errorMessage}` });
   }
