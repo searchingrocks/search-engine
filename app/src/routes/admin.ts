@@ -138,7 +138,7 @@ adminRouter.post(
         }
         // Post the raw JSONL content to Solr.
         // (Solr supports newline-delimited JSON when using the JSON update handler.)
-        const solrUrl = 'http://127.0.0.1:8983/solr/BigData/update?commit=true';
+        const solrUrl = 'http://solr1:8983/solr/BigData/update?commit=true';
         const solrResponse = await axios.post(solrUrl, fileContent, {
           headers: { 'Content-Type': 'application/json' }
         });
@@ -154,7 +154,7 @@ adminRouter.post(
         } catch (err) {
           throw new Error('Invalid JSON file format.');
         }
-        const solrUrl = 'http://127.0.0.1:8983/solr/BigData/update?commit=true';
+        const solrUrl = 'http://solr1:8983/solr/BigData/update?commit=true';
         const solrResponse = await axios.post(solrUrl, docs, {
           headers: { 'Content-Type': 'application/json' }
         });
@@ -174,8 +174,8 @@ adminRouter.post(
 // POST route to initiate the Solr database.
 adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, res: Response) => {
   try {
-    const solrCollectionUrl = 'http://127.0.0.1:8983/solr/admin/collections';
-    const solrBase = 'http://127.0.0.1:8983/solr/BigData';
+    const solrCollectionUrl = 'http://solr1:8983/solr/admin/collections';
+    const solrBase = 'http://solr1:8983/solr/BigData';
 
     // Create collection for data
     await axios.get(solrCollectionUrl, {

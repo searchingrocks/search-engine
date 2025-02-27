@@ -1,3 +1,5 @@
+version: "3.8"
+
 services:
   web:
     image: ghcr.io/searchingrocks/search-engine:main
@@ -10,6 +12,8 @@ services:
       - SESSION_SECRET=${SERVICE_REALBASE64_SESSIONSECRET}
     depends_on:
       - postgres
+    networks:
+      - search
 
   postgres:
     image: postgres:14
@@ -22,6 +26,8 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - search
 
   solr1:
     image: solr:9.2.1
@@ -34,6 +40,8 @@ services:
       - zoo1
       - zoo2
       - zoo3
+    networks:
+      - search
 
   solr2:
     image: solr:9.2.1
@@ -46,6 +54,8 @@ services:
       - zoo1
       - zoo2
       - zoo3
+    networks:
+      - search
 
   solr3:
     image: solr:9.2.1
@@ -58,6 +68,8 @@ services:
       - zoo1
       - zoo2
       - zoo3
+    networks:
+      - search
 
   solr4:
     image: solr:9.2.1
@@ -70,6 +82,8 @@ services:
       - zoo1
       - zoo2
       - zoo3
+    networks:
+      - search
 
   zoo1:
     image: zookeeper
@@ -77,13 +91,15 @@ services:
     restart: always
     hostname: zoo1
     ports:
-      - 2181:2181
-      - 7001:7000
+      - "2181:2181"
+      - "7001:7000"
     environment:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
       ZOO_4LW_COMMANDS_WHITELIST: mntr, conf, ruok
       ZOO_CFG_EXTRA: "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort=7000 metricsProvider.exportJvmInfo=true"
+    networks:
+      - search
 
   zoo2:
     image: zookeeper
@@ -91,13 +107,15 @@ services:
     restart: always
     hostname: zoo2
     ports:
-      - 2182:2181
-      - 7002:7000
+      - "2182:2181"
+      - "7002:7000"
     environment:
       ZOO_MY_ID: 2
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
       ZOO_4LW_COMMANDS_WHITELIST: mntr, conf, ruok
       ZOO_CFG_EXTRA: "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort=7000 metricsProvider.exportJvmInfo=true"
+    networks:
+      - search
 
   zoo3:
     image: zookeeper
@@ -105,13 +123,19 @@ services:
     restart: always
     hostname: zoo3
     ports:
-      - 2183:2181
-      - 7003:7000
+      - "2183:2181"
+      - "7003:7000"
     environment:
       ZOO_MY_ID: 3
       ZOO_SERVERS: server.1=zoo1:2888:3888;2181 server.2=zoo2:2888:3888;2181 server.3=zoo3:2888:3888;2181
       ZOO_4LW_COMMANDS_WHITELIST: mntr, conf, ruok
       ZOO_CFG_EXTRA: "metricsProvider.className=org.apache.zookeeper.metrics.prometheus.PrometheusMetricsProvider metricsProvider.httpPort=7000 metricsProvider.exportJvmInfo=true"
+    networks:
+      - search
 
 networks:
-  solr:
+  search:
+    driver: bridge
+
+volumes:
+  postgres_data:
