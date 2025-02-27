@@ -11,13 +11,12 @@ import fs from 'fs';
 import { sessionMiddleware } from './middlewares/session';
 
 import authRouter from './routes/auth';
-import adminRouter from './routes/admin';
+import adminRouter from './routes/admin'; // Combined admin routes (dashboard, users, settings)
 import documentsRouter from './routes/documents';
 import exportsRouter from './routes/exports';
 import recordsRouter from './routes/records';
 import spatialRouter from './routes/spatial';
 import visualizerRouter from './routes/visualizer';
-import adminSettingsRouter from './routes/adminSettings';
 
 declare module 'express-session' {
   interface SessionData {
@@ -38,7 +37,7 @@ const basic = crypto.createHash('sha256').update(hlrToken + ':' + hlrSecret).dig
 // Security middleware
 // app.use(helmet());
 
-// // Logging middleware
+// Logging middleware
 // app.use(morgan('combined'));
 
 // Body parser middleware
@@ -61,8 +60,7 @@ app.use(limiter);
 
 // Routes
 app.use('/', authRouter);
-app.use('/admin', adminRouter);
-app.use('/admin/settings', adminSettingsRouter);
+app.use('/admin', adminRouter); // now handles all admin functionality
 app.use('/documents', documentsRouter);
 app.use('/exports', exportsRouter);
 app.use('/records', recordsRouter);
@@ -72,9 +70,7 @@ app.use('/visualize', visualizerRouter);
 // Root route
 app.get('/', (req: Request, res: Response) => {
   const isLoggedIn = req.session && req.session.user;
-  const rendered = mustache.render(indexTemplate, {
-    isLoggedIn: isLoggedIn,
-  });
+  const rendered = mustache.render(indexTemplate, { isLoggedIn });
   console.log('Is user logged in?', isLoggedIn);
   return res.send(rendered);
 });
