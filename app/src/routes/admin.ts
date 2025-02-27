@@ -29,18 +29,15 @@ const adminSettingsTemplate = fs.readFileSync(
 const adminRouter = Router();
 
 // Helper middleware to ensure the user is an admin.
-const checkAdmin = (req: Request, res: Response, next: NextFunction): void => {
+const checkAdmin = (req: Request, res: Response, next: NextFunction) => {
   if (!checkUserRole(req, 'admin')) {
-    res.status(403).send('Access denied: You do not have admin privileges.');
-    return;
+    return res.status(403).send('Access denied: You do not have admin privileges.');
   }
   next();
 };
 
 // Dashboard route – combines all admin functions into one view.
 adminRouter.get('/', requireLogin, checkAdmin, (req: Request, res: Response) => {
-  // Optionally, pass additional data (e.g. a button for initiating Solr)
-  // For example, your admin.mustache could include a button that posts to /admin/init-solr.
   const rendered = mustache.render(adminDashboardTemplate, {});
   res.send(rendered);
 });
@@ -89,96 +86,95 @@ adminRouter.post('/settings', requireLogin, checkAdmin, async (req: Request, res
   res.redirect('/admin/settings');
 });
 
-// *******************************
-// New route: Initiate Solr Database
-// *******************************
+// Route to initialize the Solr database
 adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, res: Response) => {
   try {
-    // 1. Create collection for data
-    const createCollectionResponse = await axios.get("http://127.0.0.1:8983/solr/admin/collections", {
+    const solrCollectionUrl = 'http://127.0.0.1:8983/solr/admin/collections';
+    const solrBase = 'http://127.0.0.1:8983/solr/BigData';
+
+    // Create collection for data
+    await axios.get(solrCollectionUrl, {
       params: {
-        action: "CREATE",
-        name: "BigData",
+        action: 'CREATE',
+        name: 'BigData',
         numShards: 8,
         replicationFactor: 3,
-        wt: "json"
+        wt: 'json'
       }
     });
 
-    // 2. Disable schemaless mode
-    const disableSchemaResponse = await axios.post("http://127.0.0.1:8983/solr/BigData/config", {
+    // Disable schemaless mode
+    await axios.post(`${solrBase}/config`, {
       "set-user-property": { "update.autoCreateFields": "false" }
     });
 
-    // 3. Add schema fields
-    const schemaRequests = [
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"accuracy_radius","type":"pint"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"address","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"asn","type":"pint","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"asnOrg","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"autoBody","type":"string"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"autoClass","type":"string"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"autoMake","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"autoModel","type":"string"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"autoYear","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"birthYear","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"birthMonth","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"birthday","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"city","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"continent","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"country","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"dob","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"domain","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"emails","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"ethnicity","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"firstName","type":"text_general","uninvertible":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"middleName","type":"text_general","uninvertible":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"gender","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"false","name":"income","type":"string"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"true","name":"ips","type":"string","multiValued":"true","omitNorms":"true","omitTermFreqAndPositions":"true","sortMissingLast":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"lastName","type":"text_general","uninvertible":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"true","name":"latLong","type":"location","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"false","uninvertible":"false","name":"line","type":"string"}},
-      {"add-field":{"stored":"true","indexed":"false","uninvertible":"false","name":"links","type":"string","multiValued":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"true","name":"location","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"false","uninvertible":"false","name":"notes","type":"string","multiValued":"true"}},
-      {"add-field":{"stored":"true","indexed":"false","uninvertible":"false","name":"party","type":"string","multiValued":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"passwords","type":"string","multiValued":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"phoneNumbers","type":"text_general"}},
-      {"add-field":{"stored":"true","indexed":"false","uninvertible":"false","name":"photos","type":"string","multiValued":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"source","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","uninvertible":"false","name":"state","type":"string","docValues":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"usernames","type":"text_general","uninvertible":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"vin","type":"text_general","uninvertible":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"zipCode","type":"string","uninvertible":"true"}},
-      {"add-field":{"stored":"true","indexed":"true","name":"VRN","type":"text_general","uninvertible":"true"}},
-      {"add-field":{"name":"ssn","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"licenseNumber","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"debitNumber","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"debitExpiration","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"debitPin","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"creditNumber","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"creditExpiration","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"creditPin","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"passportNumber","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"militaryID","type":"string","stored":"true","indexed":"true"}},
-      {"add-field":{"name":"bankAccountNumbers","type":"string","stored":"true","indexed":"true","multiValued":"true"}},
-      {"add-field":{"name":"schoolsAttended","type":"string","stored":"true","indexed":"true","multiValued":"true"}},
-      {"add-field":{"name":"certifications","type":"string","stored":"true","indexed":"true","multiValued":"true"}},
-      {"add-field":{"name":"politicalAffiliation","type":"string","stored":"true","indexed":"true"}}
+    // List of schema commands to add fields
+    const commands = [
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "accuracy_radius", "type": "pint"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "address", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "asn", "type": "pint", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "asnOrg", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "autoBody", "type": "string"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "autoClass", "type": "string"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "autoMake", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "autoModel", "type": "string"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "autoYear", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "birthYear", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "birthMonth", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "birthday", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "city", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "continent", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "country", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "dob", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "domain", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "emails", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "ethnicity", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "firstName", "type": "text_general", "uninvertible": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "middleName", "type": "text_general", "uninvertible": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "gender", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "false", "name": "income", "type": "string"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "true", "name": "ips", "type": "string", "multiValued": "true", "omitNorms": "true", "omitTermFreqAndPositions": "true", "sortMissingLast": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "lastName", "type": "text_general", "uninvertible": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "true", "name": "latLong", "type": "location", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "false", "uninvertible": "false", "name": "line", "type": "string"}},
+      {"add-field": {"stored": "true", "indexed": "false", "uninvertible": "false", "name": "links", "type": "string", "multiValued": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "true", "name": "location", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "false", "uninvertible": "false", "name": "notes", "type": "string", "multiValued": "true"}},
+      {"add-field": {"stored": "true", "indexed": "false", "uninvertible": "false", "name": "party", "type": "string", "multiValued": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "passwords", "type": "string", "multiValued": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "phoneNumbers", "type": "text_general"}},
+      {"add-field": {"stored": "true", "indexed": "false", "uninvertible": "false", "name": "photos", "type": "string", "multiValued": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "source", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "uninvertible": "false", "name": "state", "type": "string", "docValues": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "usernames", "type": "text_general", "uninvertible": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "vin", "type": "text_general", "uninvertible": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "zipCode", "type": "string", "uninvertible": "true"}},
+      {"add-field": {"stored": "true", "indexed": "true", "name": "VRN", "type": "text_general", "uninvertible": "true"}},
+      {"add-field": {"name": "ssn", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "licenseNumber", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "debitNumber", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "debitExpiration", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "debitPin", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "creditNumber", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "creditExpiration", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "creditPin", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "passportNumber", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "militaryID", "type": "string", "stored": "true", "indexed": "true"}},
+      {"add-field": {"name": "bankAccountNumbers", "type": "string", "stored": "true", "indexed": "true", "multiValued": "true"}},
+      {"add-field": {"name": "schoolsAttended", "type": "string", "stored": "true", "indexed": "true", "multiValued": "true"}},
+      {"add-field": {"name": "certifications", "type": "string", "stored": "true", "indexed": "true", "multiValued": "true"}},
+      {"add-field": {"name": "politicalAffiliation", "type": "string", "stored": "true", "indexed": "true"}}
     ];
-    
-    // Iterate through the schema requests sequentially.
-    for (const fieldPayload of schemaRequests) {
-      await axios.post('http://127.0.0.1:8983/solr/BigData/schema?wt=json', fieldPayload, {
-        headers: { 'Accept': 'application/json' }
-      });
+
+    for (const cmd of commands) {
+      await axios.post(`${solrBase}/schema?wt=json`, cmd, { headers: { 'Accept': 'application/json' } });
     }
-    
-    res.json({ message: 'Solr database initiated successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Failed to initiate Solr database', error: error.toString() });
+
+    res.json({ message: 'Solr database initiated successfully.' });
+  } catch (err) {
+    // Cast error to Error to access the message property
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ message: `Error initiating Solr: ${errorMessage}` });
   }
 });
 
