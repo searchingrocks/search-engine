@@ -14,6 +14,12 @@ services:
       - postgres
     networks:
       - solr
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
 
   postgres:
     image: postgres:14
