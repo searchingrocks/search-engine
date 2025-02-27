@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Upload Data to Solr</title>
+  <!-- Include Vuetify CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <v-app dark>
+      <v-main>
+        <v-container>
+          <h1 class="text-center">Upload Data to Solr</h1>
+          <v-form @submit.prevent="uploadData">
+            <v-file-input
+              v-model="file"
+              label="Select JSON File"
+              accept=".json,.txt"
+              required
+            ></v-file-input>
+            <v-btn type="submit" color="primary">Upload</v-btn>
+          </v-form>
+          <div v-if="message" class="mt-4">
+            {{ message }}
+          </div>
+        </v-container>
+      </v-main>
+    </v-app>
+  </div>
+  
+  <!-- Include Vue and Vuetify JS -->
+  <script src="https://cdn.jsdelivr.net/npm/vue@2.6.12/dist/vue.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/vuetify@2.6.0/dist/vuetify.js"></script>
+  <script>
+    new Vue({
+      el: '#app',
+      vuetify: new Vuetify(),
+      data() {
+        return {
+          file: null,
+          message: ''
+        }
+      },
+      methods: {
+        async uploadData() {
+          if (!this.file) return;
+          const formData = new FormData();
+          formData.append('datafile', this.file);
+          try {
+            const response = await fetch('/admin/upload-data', {
+              method: 'POST',
+              body: formData
+            });
+            const result = await response.json();
+            this.message = result.message;
+          } catch (err) {
+            console.error(err);
+            this.message = 'Upload failed';
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

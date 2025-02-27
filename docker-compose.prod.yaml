@@ -137,5 +137,6 @@ services:
 networks:
   solr:
 
+
 volumes:
   postgres_data:
