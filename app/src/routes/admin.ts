@@ -91,7 +91,10 @@ adminRouter.post('/settings', requireLogin, checkAdmin, async (req: Request, res
 
 // GET route to display the data upload form
 adminRouter.get('/upload-data', requireLogin, checkAdmin, (req: Request, res: Response) => {
-  // Ensure you have created a template named "admin_upload.mustache"
+  // Make sure you have a template named "admin_upload.mustache" with a form containing:
+  // • A <v-file-input> named "datafile" for selecting a file.
+  // • A button to trigger file upload.
+  // • (Optionally) a button to "Initiate Solr Database" that calls the /init-solr route.
   const uploadTemplate = fs.readFileSync(
     path.join(__dirname, '..', 'templates', 'admin_upload.mustache'),
     'utf-8'
@@ -100,12 +103,12 @@ adminRouter.get('/upload-data', requireLogin, checkAdmin, (req: Request, res: Re
   res.send(rendered);
 });
 
-// POST route to handle file upload and send data to Solr.
-// We extend the Request type so that req.file is recognized.
+// Extend Request to include multer's file property.
 interface MulterRequest extends Request {
   file?: Express.Multer.File;
 }
 
+// POST route to handle file upload and send data to Solr.
 adminRouter.post(
   '/upload-data',
   requireLogin,
@@ -120,28 +123,44 @@ adminRouter.post(
       const filePath = req.file.path;
       const fileContent = fs.readFileSync(filePath, 'utf-8');
 
-      // Validate that the file is in JSONL format: every nonempty line must be valid JSON.
-      const lines = fileContent.split(/\r?\n/).filter(line => line.trim().length > 0);
-      for (const line of lines) {
-        try {
-          JSON.parse(line);
-        } catch (err) {
-          throw new Error(`Invalid JSON on line: ${line}`);
+      // Determine if the file is JSONL (ends with .jsonl) or a JSON array
+      const isJSONL = req.file.originalname.toLowerCase().endsWith('.jsonl');
+
+      if (isJSONL) {
+        // Validate each non-empty line is valid JSON
+        const lines = fileContent.split(/\r?\n/).filter(line => line.trim().length > 0);
+        for (const line of lines) {
+          try {
+            JSON.parse(line);
+          } catch (err) {
+            throw new Error(`Invalid JSON on line: ${line}`);
+          }
         }
+        // Post the raw JSONL content to Solr.
+        // (Solr supports newline-delimited JSON when using the JSON update handler.)
+        const solrUrl = 'http://127.0.0.1:8983/solr/BigData/update?commit=true';
+        const solrResponse = await axios.post(solrUrl, fileContent, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        // Optionally, you might want to send the file content through as text/plain.
+        // For now, we use application/json.
+        fs.unlinkSync(filePath);
+        res.json({ message: 'JSONL data uploaded successfully', solrResponse: solrResponse.data });
+      } else {
+        // Assume the file is a valid JSON array
+        let docs;
+        try {
+          docs = JSON.parse(fileContent);
+        } catch (err) {
+          throw new Error('Invalid JSON file format.');
+        }
+        const solrUrl = 'http://127.0.0.1:8983/solr/BigData/update?commit=true';
+        const solrResponse = await axios.post(solrUrl, docs, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+        fs.unlinkSync(filePath);
+        res.json({ message: 'JSON data uploaded successfully', solrResponse: solrResponse.data });
       }
-      // Optionally, convert JSONL into an array of JSON objects
-      const docs = lines.map(line => JSON.parse(line));
-
-      // POST the array of documents to Solr's update endpoint.
-      const solrUrl = 'http://127.0.0.1:8983/solr/BigData/update?commit=true';
-      const solrResponse = await axios.post(solrUrl, docs, {
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      // Remove the temporary uploaded file
-      fs.unlinkSync(filePath);
-
-      res.json({ message: 'Data uploaded successfully', solrResponse: solrResponse.data });
     } catch (err) {
       console.error(err);
       const errorMessage = err instanceof Error ? err.message : String(err);
@@ -152,7 +171,7 @@ adminRouter.post(
 
 // ***** Solr Initialization Route *****
 
-// POST route to initiate the Solr database. (A button on the upload page may trigger this route.)
+// POST route to initiate the Solr database.
 adminRouter.post('/init-solr', requireLogin, checkAdmin, async (req: Request, res: Response) => {
   try {
     const solrCollectionUrl = 'http://127.0.0.1:8983/solr/admin/collections';
