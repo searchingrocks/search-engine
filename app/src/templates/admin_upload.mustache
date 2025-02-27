@@ -13,6 +13,8 @@
       <v-main>
         <v-container>
           <h1 class="text-center">Upload Data to Solr</h1>
+          
+          <!-- File Upload Form -->
           <v-form @submit.prevent="uploadData">
             <v-file-input
               v-model="file"
@@ -22,6 +24,12 @@
             ></v-file-input>
             <v-btn type="submit" color="primary">Upload</v-btn>
           </v-form>
+          
+          <v-divider class="my-4"></v-divider>
+          
+          <!-- New Button to Initiate Solr Database -->
+          <v-btn color="secondary" @click="initiateSolr">Initiate Solr Database</v-btn>
+          
           <div v-if="message" class="mt-4">
             {{ message }}
           </div>
@@ -46,6 +54,27 @@
       methods: {
         async uploadData() {
           if (!this.file) return;
+          
+          // Validate file extension
+          const allowedExtensions = ['jsonl', 'json'];
+          const fileExtension = this.file.name.split('.').pop().toLowerCase();
+          if (!allowedExtensions.includes(fileExtension)) {
+            this.message = 'Invalid file type. Please upload a .jsonl or .json file.';
+            return;
+          }
+          
+          // Read file content and verify that each line is valid JSON (for JSONL files)
+          try {
+            const fileContent = await this.readFile(this.file);
+            const lines = fileContent.split('\n').filter(line => line.trim() !== '');
+            for (const line of lines) {
+              JSON.parse(line);
+            }
+          } catch (e) {
+            this.message = 'File content is not valid JSON Lines.';
+            return;
+          }
+          
           const formData = new FormData();
           formData.append('datafile', this.file);
           try {
@@ -58,6 +87,26 @@
           } catch (err) {
             console.error(err);
             this.message = 'Upload failed';
+          }
+        },
+        readFile(file) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsText(file);
+          });
+        },
+        async initiateSolr() {
+          try {
+            const response = await fetch('/admin/init-solr', {
+              method: 'POST'
+            });
+            const result = await response.json();
+            this.message = result.message;
+          } catch (err) {
+            console.error(err);
+            this.message = 'Solr initiation failed';
           }
         }
       }
